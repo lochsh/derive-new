@@ -125,6 +125,7 @@ fn path_to_string(path: &syn::Path) -> String {
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use syn::Token;
+use syn::parse::Parser;
 
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -168,6 +169,7 @@ fn new_impl(
     named: bool,
     variant: Option<&syn::Ident>,
 ) -> proc_macro2::TokenStream {
+    let attrs = ItemAttrs::parse(&ast.attrs);
     let name = &ast.ident;
     let unit = fields.is_none();
     let empty = Default::default();
@@ -205,10 +207,14 @@ fn new_impl(
     new.set_span(proc_macro2::Span::call_site());
     let lint_attrs = collect_parent_lint_attrs(&ast.attrs);
     let lint_attrs = my_quote![#(#lint_attrs),*];
+    let impl_attr = attrs.impl_attr;
+    let method_attr = attrs.method_attr;
     my_quote! {
+        #impl_attr
         impl #impl_generics #name #ty_generics #where_clause {
             #[doc = #doc]
             #lint_attrs
+            #method_attr
             pub fn #new(#(#args),*) -> Self {
                 #name #qual #inits
             }
@@ -243,6 +249,94 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
         .map(|p| p.1)
         .cloned()
         .collect()
+}
+
+#[derive(Default)]
+struct ItemAttrs {
+    impl_attr: Option<syn::Attribute>,
+    method_attr: Option<syn::Attribute>,
+}
+
+impl ItemAttrs {
+    pub fn parse(attrs: &[syn::Attribute]) -> ItemAttrs {
+        use syn::{AttrStyle, Meta, NestedMeta};
+        let mut result = ItemAttrs::default();
+        let mut found = false;
+
+        for attr in attrs.iter() {
+            match attr.style {
+                AttrStyle::Outer => {}
+                _ => continue,
+            }
+
+            let last_attr_path = attr
+                .path
+                .segments
+                .iter()
+                .last()
+                .expect("Expected at least one segment where #[segment[::segment*](..)]");
+            if (*last_attr_path).ident != "new" {
+                continue;
+            }
+            let meta = match attr.parse_meta() {
+                Ok(meta) => meta,
+                Err(_) => continue,
+            };
+            let list = match meta {
+                Meta::List(l) => l,
+                _ if meta.path().is_ident("new") => {
+                    panic!("Invalid #[new] attribute, expected #[new(..)]")
+                }
+                _ => continue,
+            };
+            if found {
+                panic!("Expected at most one #[new] attribute");
+            }
+            found = true;
+
+            for item in list.nested.iter() {
+                match *item {
+                    NestedMeta::Meta(Meta::Path(ref path)) => {
+                        panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
+                    }
+                    NestedMeta::Meta(Meta::NameValue(ref kv)) => {
+                        if let syn::Lit::Str(ref s) = kv.lit {
+                            if kv.path.is_ident("impl_attr") {
+                                result.impl_attr = Some(
+                                    syn::Attribute::parse_outer
+                                    .parse_str(&s.value())
+                                    .unwrap()
+                                    .into_iter()
+                                    .next()
+                                    .unwrap(),
+                                );
+                            } else if kv.path.is_ident("method_attr") {
+                                result.method_attr = Some(
+                                    syn::Attribute::parse_outer
+                                    .parse_str(&s.value())
+                                    .unwrap()
+                                    .into_iter()
+                                    .next()
+                                    .unwrap(),
+                                );
+                            } else {
+                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
+                            }
+                        } else {
+                            panic!("Non-string literal value in #[new] attribute");
+                        }
+                    }
+                    NestedMeta::Meta(Meta::List(ref l)) => {
+                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
+                    }
+                    NestedMeta::Lit(_) => {
+                        panic!("Invalid #[new] attribute: literal value in #[new(..)]");
+                    }
+                }
+            }
+        }
+        result
+    }
 }
 
 enum FieldAttr {
