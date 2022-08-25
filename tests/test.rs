@@ -2,6 +2,7 @@
 
 #[macro_use]
 extern crate derive_new;
+extern crate core;
 
 use std::fmt::Debug;
 

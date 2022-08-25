@@ -48,8 +48,9 @@
 //! or via `#[new(value = "..")]` which initializes the field with a given expression:
 //!
 //! ```rust
+//! extern crate core;
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! struct Foo {
 //!     x: bool,
@@ -68,8 +69,9 @@
 //! included in the argument list and will be intialized automatically:
 //!
 //! ```rust
+//! extern crate core;
 //! use derive_new::new;
-//! 
+//!
 //! use std::marker::PhantomData;
 //!
 //! #[derive(new)]
@@ -90,8 +92,9 @@
 //! structs work for enum variants as well:
 //!
 //! ```rust
+//! extern crate core;
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! enum Enum {
 //!     FirstVariant,
@@ -109,6 +112,8 @@
 //! An attribute can be set on the annotated type's impl block, and on its generated new method:
 //!
 //! ```rust
+//! use derive_new::new;
+//!
 //! #[derive(new)]
 //! #[new(impl_attr = "#[allow(unused)]", method_attr = "#[inline]")]
 //! struct Foo {
@@ -130,9 +135,10 @@
 //! #[allow(unused)]
 //! impl Foo {
 //!     #[inline]
-//!     fn new(self, x: bool, y: i32, z: Vec<String>) {
+//!     fn new(x: bool, y: i32, z: Vec<String>) -> Self {
 //!         Foo { x, y, z }
 //!     }
+//! }
 //! ```
 #![crate_type = "proc-macro"]
 #![recursion_limit = "192"]
@@ -142,6 +148,7 @@ extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
 extern crate syn;
+extern crate core;
 
 macro_rules! my_quote {
     ($($t:tt)*) => (quote_spanned!(proc_macro2::Span::call_site() => $($t)*))
@@ -201,7 +208,7 @@ fn new_impl(
     let attrs = ItemAttrs::parse(&ast.attrs);
     let name = &ast.ident;
     let unit = fields.is_none();
-    let empty = Default::default();
+    let empty = core::default::Default::default();
     let fields: Vec<_> = fields
         .unwrap_or(&empty)
         .iter()
