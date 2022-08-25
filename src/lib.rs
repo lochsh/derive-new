@@ -105,6 +105,35 @@
 //!   let _ = Enum::new_third_variant(42);
 //! }
 //! ```
+//!
+//! An attribute can be set on the annotated type's impl block, and on its generated new method:
+//!
+//! ```rust
+//! #[derive(new)]
+//! #[new(impl_attr = "#[allow(unused)]", method_attr = "#[inline]")]
+//! struct Foo {
+//!     x: bool,
+//!     y: i32,
+//!     z: Vec<String>,
+//! }
+//! ```
+//!
+//! which is equivalent to:
+//!
+//! ```rust
+//! struct Foo {
+//!     x: bool,
+//!     y: i32,
+//!     z: Vec<String>,
+//! }
+//!
+//! #[allow(unused)]
+//! impl Foo {
+//!     #[inline]
+//!     fn new(self, x: bool, y: i32, z: Vec<String>) {
+//!         Foo { x, y, z }
+//!     }
+//! ```
 #![crate_type = "proc-macro"]
 #![recursion_limit = "192"]
 
