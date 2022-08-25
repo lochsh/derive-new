@@ -360,6 +360,87 @@ fn test_more_involved_enum() {
     );
 }
 
+#[test]
+fn test_struct_with_impl_attr_and_method_attr() {
+    #[derive(new)]
+    #[new(impl_attr = "#[must_use]", method_attr = "#[inline]")]
+    struct Foo {
+        x: u32,
+        y: i64,
+    }
+
+    let foo = Foo::new(1, 2);
+    assert_eq!(foo.x, 1);
+    assert_eq!(foo.y, 2);
+}
+
+#[test]
+fn test_struct_with_impl_attr() {
+    #[derive(new)]
+    #[new(impl_attr = "#[must_use]")]
+    struct Foo {
+        x: u32,
+        y: i64,
+    }
+
+    let foo = Foo::new(1, 2);
+    assert_eq!(foo.x, 1);
+    assert_eq!(foo.y, 2);
+}
+
+#[test]
+fn test_struct_with_method_attr() {
+    #[derive(new)]
+    #[new(method_attr = "#[inline]")]
+    struct Foo {
+        x: u32,
+        y: i64,
+    }
+
+    let foo = Foo::new(1, 2);
+    assert_eq!(foo.x, 1);
+    assert_eq!(foo.y, 2);
+}
+
+#[test]
+fn test_enum_with_impl_attr_and_method_attr() {
+    #[derive(new)]
+    #[new(impl_attr = "#[must_use]", method_attr = "#[inline]")]
+    enum Foo {
+        X,
+        Y,
+    }
+
+    Foo::new_x();
+    Foo::new_y();
+}
+
+#[test]
+fn test_enum_with_impl_attr() {
+    #[derive(new)]
+    #[new(impl_attr = "#[must_use]")]
+    enum Foo {
+        X,
+        Y,
+    }
+
+    Foo::new_x();
+    Foo::new_y();
+}
+
+#[test]
+fn test_enum_with_method_attr() {
+    #[derive(new)]
+    #[new(method_attr = "#[inline]")]
+    enum Foo {
+        X,
+        Y,
+    }
+
+    Foo::new_x();
+    Foo::new_y();
+}
+
 #[allow(non_snake_case)]
 #[derive(new, PartialEq, Debug)]
 pub struct Upside {
